@@ -1,0 +1,70 @@
+ Build;GITPATH;getEnv;DEV;PRODUCT;PULL;m;dirs;nss;dir;ns;ai3;z;gitrepos;warn;LX
+ getEnv←{0=≢r←2 ⎕NQ'.' 'GetEnvironment' ⍵:⍺ ⋄ r}
+ DEV←∨/'yY1'∊'N' getEnv 'DEV'
+ PRODUCT←'MYAPP' getEnv 'PRODUCTNAME'
+ LX←'' getEnv 'LX'
+ PULL←∨/'pull'⍷⎕C 2 ⎕NQ'.' 'GetCommandLine'
+
+ ⎕←'Building ',PRODUCT,' ',((DEV+1)⊃'runtime' 'development'),' workspace...'
+ :If 0=≢GITPATH←1⊃⎕NPARTS ¯1↓1⊃1 ⎕NPARTS 4⊃5179⌶1⊃⎕SI
+     GITPATH←∊1 ⎕NPARTS{⍵,'/'/⍨~(¯1↑⍵)∊'/\'}{0=≢⍵:'c:\devt\' ⋄ ⍵}2 ⎕NQ'.' 'GetEnvironment' 'GITPATH'
+ :EndIf
+ :If ~∧/m←⎕NEXISTS dirs←GITPATH∘,¨'myapp/dyalog' 'AtfIn/APLSource/A2K' 'deltawi/code/DWI'
+     ⎕←'Unable to build ',PRODUCT,', cannot find:'
+     ⎕←⍪'      '∘,¨(~m)/dirs
+     →0
+ :EndIf
+ nss←'#' 'A2K' 'dwi'
+
+ :For (ns dir) :InEach nss dirs
+     ai3←⎕AI[3]
+     ⍞←'Processing ',dir,'... '
+     :If PULL
+         ⎕←dir (1⊃pull←⎕SHELL 'git' '-C' dir 'pull')
+     :EndIf
+     :If DEV
+         z←(fastLoad:1 ⋄ flatten:∨/'myapp'⍷dir)⎕SE.Link.Create ns dir
+     :Else
+         z←(fastLoad:1 ⋄ flatten:∨/'myapp'⍷dir)⎕SE.Link.Import ns dir
+     :EndIf
+     ⎕←(1⍕0.001×(3⊃⎕AI)-ai3),' seconds'
+ :EndFor
+
+ ⎕←'Verifying git status...'⊣warn←0
+ gitrepos←GitStatus¨GITPATH∘,¨{(¯1+⍵⍳'/')↑⍵}¨(≢GITPATH)↓¨dirs
+ ⎕←⍪gitrepos
+
+ :If ∨/~gitrepos.branch∊'main' 'main...origin/main'
+     ⎕←'** Warning: not building exclusively from main branches'⊣warn←1
+ :EndIf
+ :If ~∧/gitrepos.clean
+     ⎕←'** Warning: repos contain uncommited changes: ',(≢GITPATH)↓¨(~gitrepos.clean)/gitrepos.path⊣warn←1
+ :EndIf
+
+ :If 0≠≢RIDE←2 ⎕NQ'.' 'GetEnvironment' 'RIDE' ⍝ LEAVE THIS AS GLOBAL for Run to inspect!
+     ⎕←'*** NB NB RIDE is set: ',RIDE,' ***'
+ :EndIf
+
+ :If warn
+     ⎕←'Proceed (Y/N)?'
+     →(∨/'yY'∊⍞)↓0
+ :EndIf
+
+ ⎕←'Copying SQAPL and Conga'
+ 'Conga' ⎕CY 'conga'
+ 'SQA' ⎕CY 'sqapl'
+
+ GITREPOS←gitrepos
+
+ ⎕WSID←'C:\MYAPP\MYAPP'
+
+
+ :If DEV
+     ⎕LX←'Patch ⋄ ',LX
+     0 ⎕SAVE ⎕WSID
+     ⎕←'Saved: ',⎕WSID
+
+ :Else ⍝ Build a stand-alone executable
+     ⎕LX←LX
+     BuildExe
+ :EndIf

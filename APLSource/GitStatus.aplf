@@ -1,0 +1,13 @@
+r←{hash} GitStatus path;gitcmd;status;keys;m;diff
+⍝ Return Git Status namespace
+
+r←⎕NS ''
+r.path←path
+gitcmd←{(r streams rc)←3↑⎕SHELL 'git' '-C' ⍺,⍵ ⋄ rc≠0:r ⎕SIGNAL 11 ⋄ 1⊃r}
+diff←path gitcmd 'diff' '--name-status' (⎕VGET ⊂'hash' '') '--' '*.aplf'
+r.diff←{'"'~⍨'UTF-8'⎕UCS ⎕UCS'\\\d{3}'⎕R{⎕UCS 8⊥¯1+⎕D⍳1↓⍵.Match}⊢⍵}¨diff
+r.branch←1⊃path gitcmd 'rev-parse' '--abbrev-ref' 'HEAD'
+r.hash←1⊃path gitcmd 'rev-parse' '--short' 'HEAD'
+
+r.(clean←0=≢diff)
+r.⎕DF 'Repo ',path,'[',r.branch,'] #',r.hash,' ',(1+r.clean)⊃('[',(⍕≢r.diff),' modifications]') '[clean]'

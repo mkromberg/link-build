@@ -1,0 +1,12 @@
+config←ReadConfig;isOn;getEnv
+getEnv←{2 ⎕NQ'.' 'GetEnvironment' ⍵}
+isOn←{∨/'yY1'∊getEnv ⍵}
+'config' ⎕NS ''
+
+config.DEV←isOn 'DEV'
+config.MODEL←getEnv 'MOD'
+config.SILENT←isOn 'SIL'
+config.DISPLAY_TRAPPED_ERRORS←isOn 'DISPLAY_TRAPPED_ERRORS' ⍝ Log all ⎕ELX/⎕ALX errors to the session
+config.TRAP_DWI_ERRORS←isOn 'TRAP_DWI_ERRORS'               ⍝ "n" if you want to debug ∆WI
+config.GITPATH←getEnv 'GITPATH'
+config.STEP←getEnv 'STEP'

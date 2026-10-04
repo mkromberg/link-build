@@ -1,0 +1,63 @@
+ Run;GITPATH;dirs;nss;z;ns;dir;repo;changed;files;prefix;names;parts;m;file;ext;name;path;build;loadsrc;⎕TRAP;silent;saved;times;config
+⍝ Patch workspace built by Build
+
+ ⎕TRAP←0 'C' '→ERROR'
+
+ config←ReadConfig
+ loadsrc←4⊃5179⌶1⊃⎕SI ⍝ Where was this function loaded from?
+
+ :If config.DEV ⍝ In developer mode, patch changes since last Build
+     ⎕←'Setting up development environment - Patching and recreating Links'
+     :If 0=≢GITPATH←{(¯1+1⍳⍨'myapp/dyalog'⍷⎕C ⍵)↑⍵}∊1 ⎕NPARTS loadsrc
+         GITPATH←∊1 ⎕NPARTS{⍵,'/'/⍨~(¯1↑⍵)∊'/\'}{0=≢⍵:'c:\devt\' ⋄ ⍵}config.GITPATH
+     :EndIf
+     dirs←GITPATH∘,¨'myapp/dyalog' 'AtfIn/APLSource/A2K' 'deltawi/code/DWI'
+     nss←'#' 'A2K' 'dwi'
+
+     :For (ns dir) :InEach nss dirs
+         path←GITPATH,{(¯1+⍵⍳'/')↑⍵}(≢GITPATH)↓dir
+         saved←13 ⎕NINFO ⎕WSID,'.dws'
+         (names times)←0 13 ⎕NINFO⍠('Wildcard' 1)('Recurse' 1)⊢path,'/*'
+         parts←⎕NPARTS (times>saved)/names
+         names←(m←((3⊃¨parts)∊⊂'.dyalog')∨(4↑¨3⊃¨parts)∊⊂'.apl')/2⊃¨parts
+         ⎕EX names~⊂'Run'
+         :For (path name ext) :In m/parts
+             ⎕←'Patching ',path,name,ext
+             :If ext≡'.apla'
+                 ns ⎕SE.Link.Fix 1⊃⎕NGET(path,name,ext)1
+             :Else
+                 2(⍎ns).⎕FIX'file://',path,name,ext
+             :EndIf
+         :EndFor
+         z←(fastLoad:1 ⋄ preloaded:1 ⋄ flatten:∨/'myapp'⍷dir)⎕SE.Link.Create ns dir
+     :EndFor
+     :If ∨/m←~⎕NEXISTS ⎕SE.Link.Links.dir
+         ⎕←'*** WARNING: source folder(s) not found: ',⍕m/⎕SE.Link.Links.dir
+     :EndIf
+     :If 0=≢loadsrc
+         ⎕←'*** WARNING: this is not a development workspace - no file links ***'
+     :EndIf
+     ⎕←'Config:'
+     ⎕JSON⍠'Compact' 0⊢config
+ :ElseIf 0≠≢loadsrc
+     ⎕←'*** WARNING: development workspace - file links exist ***'
+ :EndIf
+
+ :If config.DEV∧~⎕SYSTEM.Executable.Runtime∨silent
+     ⎕←'      ',config.LX
+ :Else
+     :If 0≠≢RIDE
+         3502⌶RIDE ⋄ 3502⌶1
+         ⎕←'NB RIDE is enabled - disable before shipping! Hit ENTER to continue startup.'
+         z←⍞
+     :EndIf
+     LOAD
+     ⎕OFF
+ :EndIf
+ →0
+
+ ERROR:
+    ⎕TRAP←0 'S'
+    'EF' ⎕WC 'Form' (PRODUCT,' Startup Error') ('Size' 300 1000)('Coord' 'Pixel')
+    'EF.TXT' ⎕WC 'Text' (⊂⍕⍪⎕DMX.DM) (10 10)('Font' 'APL385 Unicode')
+    ⎕DQ 'EF'

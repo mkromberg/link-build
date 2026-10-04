@@ -1,2 +1,4 @@
 # link-build
-Build system for Linked repositories
+Experimental Build system for Linked repositories
+
+(More documentation to come)
