@@ -1,70 +1,94 @@
- Build;GITPATH;getEnv;DEV;PRODUCT;PULL;m;dirs;nss;dir;ns;ai3;z;gitrepos;warn;LX
- getEnv←{0=≢r←2 ⎕NQ'.' 'GetEnvironment' ⍵:⍺ ⋄ r}
- DEV←∨/'yY1'∊'N' getEnv 'DEV'
- PRODUCT←'MYAPP' getEnv 'PRODUCTNAME'
- LX←'' getEnv 'LX'
+ Build;GITPATH;PULL;config;folders;gitfolders;dirs;f;dir;ai3;z;gitrepos;warn;msg;m;WSS;rootedns
+⍝ Build a workspace using the configuration named in BUILD_CONFIG (See readConfig)
+
+ ai3←⎕AI[3]
+ rootedns←{(('#'≠1↑⍵)/'#.'),⍵}
+ WSS←'SQAPL' 'CONGA' ⍝ Distributed workspaces
+
+ CONFIG←config←ReadConfig
  PULL←∨/'pull'⍷⎕C 2 ⎕NQ'.' 'GetCommandLine'
 
- ⎕←'Building ',PRODUCT,' ',((DEV+1)⊃'runtime' 'development'),' workspace...'
- :If 0=≢GITPATH←1⊃⎕NPARTS ¯1↓1⊃1 ⎕NPARTS 4⊃5179⌶1⊃⎕SI
-     GITPATH←∊1 ⎕NPARTS{⍵,'/'/⍨~(¯1↑⍵)∊'/\'}{0=≢⍵:'c:\devt\' ⋄ ⍵}2 ⎕NQ'.' 'GetEnvironment' 'GITPATH'
- :EndIf
- :If ~∧/m←⎕NEXISTS dirs←GITPATH∘,¨'myapp/dyalog' 'AtfIn/APLSource/A2K' 'deltawi/code/DWI'
-     ⎕←'Unable to build ',PRODUCT,', cannot find:'
+ ⎕←'Building ',config.PRODUCT,' ',((1+config.DEV)⊃'runtime' 'development'),' workspace...'
+ GITPATH←∊1 ⎕NPARTS{⍵,'/'/⍨~(¯1↑⍵)∊'/\'}config.GITPATH
+
+ folders←config.folders ⍝ list of {name ns path flatten link}, see Claude/cleanup.md Phase 1
+ gitfolders←(~folders.name∊WSS)/folders
+ dirs←GITPATH∘,¨gitfolders.path
+
+ :If ~∧/m←⎕NEXISTS dirs
+     ⎕←'Unable to build ',config.PRODUCT,', cannot find:'
      ⎕←⍪'      '∘,¨(~m)/dirs
      →0
  :EndIf
- nss←'#' 'A2K' 'dwi'
 
- :For (ns dir) :InEach nss dirs
-     ai3←⎕AI[3]
-     ⍞←'Processing ',dir,'... '
-     :If PULL
-         ⎕←dir (1⊃pull←⎕SHELL 'git' '-C' dir 'pull')
-     :EndIf
-     :If DEV
-         z←(fastLoad:1 ⋄ flatten:∨/'myapp'⍷dir)⎕SE.Link.Create ns dir
+ :For f :In folders
+     f.ns←rootedns f.ns ⍝ Make sure it has a #.
+     :If (⊂f.name)∊WSS
+         ⍞←'Copying ',f.name,'... '
+         f.ns #.⎕CY f.path
      :Else
-         z←(fastLoad:1 ⋄ flatten:∨/'myapp'⍷dir)⎕SE.Link.Import ns dir
+         dir←GITPATH,f.path
+         ⍞←'Linking ',dir,'... '
+         :If PULL
+             ⎕←dir (1⊃⎕SHELL 'git' '-C' dir 'pull')
+         :EndIf
+         :If config.DEV∧f.link ⍝ bidirectionally linked at runtime - code changes are recorded
+             z←(fastLoad:1 ⋄ flatten:f.flatten ⋄ source:'dir')⎕SE.Link.Create f.ns dir
+         :Else
+             z←(fastLoad:1 ⋄ flatten:f.flatten ⋄ overwrite:1)⎕SE.Link.Import f.ns dir
+         :EndIf
      :EndIf
-     ⎕←(1⍕0.001×(3⊃⎕AI)-ai3),' seconds'
  :EndFor
 
+ #.linkbuild←⎕THIS ⍝ Restore #.linkbuild in case something happened to it above
+
  ⎕←'Verifying git status...'⊣warn←0
- gitrepos←GitStatus¨GITPATH∘,¨{(¯1+⍵⍳'/')↑⍵}¨(≢GITPATH)↓¨dirs
+ gitrepos←GitStatus¨dirs
  ⎕←⍪gitrepos
 
+ msg←⍬
  :If ∨/~gitrepos.branch∊'main' 'main...origin/main'
-     ⎕←'** Warning: not building exclusively from main branches'⊣warn←1
+     msg,←⊂'Not building exclusively from main branches'
+     warn←1
  :EndIf
  :If ~∧/gitrepos.clean
-     ⎕←'** Warning: repos contain uncommited changes: ',(≢GITPATH)↓¨(~gitrepos.clean)/gitrepos.path⊣warn←1
+     msg,←⊂'Repos contain uncommitted changes: ',∊{((≢GITPATH)↓⍵),' '}¨(~gitrepos.clean)/gitrepos.path
+     warn←1
  :EndIf
 
- :If 0≠≢RIDE←2 ⎕NQ'.' 'GetEnvironment' 'RIDE' ⍝ LEAVE THIS AS GLOBAL for Run to inspect!
+ :If 0≠≢RIDE←2 ⎕NQ'.' 'GetEnvironment' 'RIDE' ⍝ LEAVE THIS AS GLOBAL for startup to inspect!
      ⎕←'*** NB NB RIDE is set: ',RIDE,' ***'
  :EndIf
 
  :If warn
-     ⎕←'Proceed (Y/N)?'
-     →(∨/'yY'∊⍞)↓0
+     :If ~Warn msg
+         →0
+     :EndIf
  :EndIf
 
- ⎕←'Copying SQAPL and Conga'
- 'Conga' ⎕CY 'conga'
- 'SQA' ⎕CY 'sqapl'
-
  GITREPOS←gitrepos
+ ⎕WSID←config.WS
 
- ⎕WSID←'C:\MYAPP\MYAPP'
+ z←⎕SE.Link.Break ⎕THIS     ⍝ Unlink the build system
+ :If 0<≢LINKS←⎕NS¨(≢⎕SE.Link.Links)⍴⊂''
+     props←'ns' 'dir' 'flatten' 'caseCode' ⍝ Properties to preserve
+     LINKS ⎕VSET¨ ↓¨props∘,¨⍪¨⎕SE.Link.Links ⎕VGET props ⍝ Record the links to be re-established on Run
+     z←⎕SE.Link.Break LINKS.ns  ⍝ Unlink everything before save
+ :EndIf
 
-
- :If DEV
-     ⎕LX←'Patch ⋄ ',LX
+ :If config.DEV
+     ⎕LX←'linkbuild.Run'
      0 ⎕SAVE ⎕WSID
      ⎕←'Saved: ',⎕WSID
-
+     
  :Else ⍝ Build a stand-alone executable
-     ⎕LX←LX
-     BuildExe
+     ⎕LX←CONFIG.LX
+     config.(exe.configsource←configsource)
+     BuildExe config.exe
+ :EndIf
+ 
+ ⎕←'Build time: ',(1⍕0.001×(3⊃⎕AI)-ai3),' seconds'
+ 
+ :If config.DEV ⍝ Enter development mode
+     Run
  :EndIf

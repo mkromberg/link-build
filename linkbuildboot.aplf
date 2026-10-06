@@ -1,0 +1,3 @@
+ linkbuildboot
+ ⎕SE.Link.Create 'linkbuild' 'APLSource'
+ linkbuild.Build

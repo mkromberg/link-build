@@ -1,12 +1,17 @@
-config←ReadConfig;isOn;getEnv
+config←ReadConfig;getEnv;folder
+⍝ All build parameters (except DEV and RIDE, which stay plain environment
+⍝ variables - see Build and Patch) live in a JSON file named by the
+⍝ BUILD_CONFIG environment variable. See Claude/cleanup.md Phase 1.
 getEnv←{2 ⎕NQ'.' 'GetEnvironment' ⍵}
-isOn←{∨/'yY1'∊getEnv ⍵}
-'config' ⎕NS ''
+:If 0=≢folder←getEnv 'BUILD_CONFIG'
+    ⎕←'*** BUILD_CONFIG environment variable is not set ***'
+    ⎕SIGNAL 11
+:EndIf
 
-config.DEV←isOn 'DEV'
-config.MODEL←getEnv 'MOD'
-config.SILENT←isOn 'SIL'
-config.DISPLAY_TRAPPED_ERRORS←isOn 'DISPLAY_TRAPPED_ERRORS' ⍝ Log all ⎕ELX/⎕ALX errors to the session
-config.TRAP_DWI_ERRORS←isOn 'TRAP_DWI_ERRORS'               ⍝ "n" if you want to debug ∆WI
-config.GITPATH←getEnv 'GITPATH'
-config.STEP←getEnv 'STEP'
+:If ~⎕NEXISTS file←folder,'/linkbuild.json'
+    ⎕←'*** BUILD_CONFIG file not found: ',file
+    ⎕SIGNAL 11
+:EndIf
+config←⎕JSON 1⊃⎕NGET file
+config.DEV←∨/'yY1'∊getEnv 'DEV'
+config.configsource←1⊃1 ⎕NPARTS file

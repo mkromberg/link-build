@@ -1,25 +1,26 @@
- BuildExe;filename;type;flags;resource;icon;cmdline;details;buildfile
+ BuildExe cfg;filename;type;flags;resource;icon;cmdline;details;buildfile;ver
 
- filename←'C:\MYAPPD\MYAPP.exe'
- type←'StandaloneNativeExe'
- flags←8 ⍝ Runtime
- resource←''
- icon←'c:\MYAPPD\MYAPP.ico'
- cmdline←'MYAPP.exe MAXWS=1.2G MYAPP_FORMSIZE="1000 1600" AUTODPI=0'
- buildfile←GITPATH,'myapp/installer/MYAPP/MYAPP.exe'
+ filename←cfg.filename
+ type←cfg.type
+ flags←8×cfg.runtime
+ resource←cfg.resource
+ icon←cfg.(configsource,'/',icon)
+ cmdline←cfg.cmdline
+ buildcopy←GITPATH,cfg.buildcopy
+ ver←,↑'Mmm YYYY'(1200⌶)1 ⎕DT'J'
 
- details←['Comments'        'MYAPP® for Dyalog APL'
-          'CompanyName'     'MYAPP Inc.'
-          'FileDescription' 'MYAPP® executable for Dyalog APL'
-          'FileVersion'     (↑'Mmm YYYY'(1200⌶)1 ⎕DT'J')
-          'ProductVersion'  (↑'Mmm YYYY'(1200⌶)1 ⎕DT'J')
-          'LegalCopyright'  ('Copyright MYAPP Inc. ',⍕1⊃⎕TS)
-          'ProductName'     'MYAPP® for Dyalog APL']
+ details←['Comments'        cfg.details.Comments
+          'CompanyName'     cfg.details.CompanyName
+          'FileDescription' cfg.details.FileDescription
+          'FileVersion'     ver
+          'ProductVersion'  ver
+          'LegalCopyright'  (cfg.details.LegalCopyright,' ',⍕1⊃⎕TS)
+          'ProductName'     cfg.details.ProductName]
 
  :If 1=2 ⎕NQ'.' 'bind'filename type flags resource icon cmdline details
-     ⎕←'Created executable with command line ',cmdline
-     :If ⎕NEXISTS buildfile
-         buildfile(⎕NCOPY⍠'IfExists' 'Replace')filename
+     ⎕←'Created ',((cfg.runtime)/'runtime '),'executable with command line ',cmdline
+     :If ⎕NEXISTS buildcopy
+         buildcopy(⎕NCOPY⍠'IfExists' 'Replace')filename
          ⎕←'Also updated ',buildfile
      :EndIf
  :Else

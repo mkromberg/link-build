@@ -1,0 +1,1 @@
+..\..\build BUILD_CONFIG="stats.build.json" %1 %2 %3

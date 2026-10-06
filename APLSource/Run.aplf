@@ -1,0 +1,55 @@
+  Run;saved;m;link;ns;dir;names;times;parts;path;name;ext;z;⎕TRAP
+⍝ Patch, then "launch" workspace built by Build
+
+ ⎕TRAP←0 'C' '→ERROR'
+
+ ⎕←'Setting up development environment - Patching and recreating Links'
+ saved←13 ⎕NINFO ⎕WSID,('.dws'≢⎕C ¯4↑⎕wsid)/'.dws' ⍝ When the workspace was saved
+ LINKS.preloaded←1                   ⍝ Flag them all as preloaded
+ :If ∨/m←~⎕NEXISTS LINKS.dir
+     ⎕←'*** WARNING: source folder(s) not found: ',⍕m/⎕SE.Link.Links.dir
+     LINKS←(~m)/LINKS
+ :EndIf
+
+ :For link :In LINKS
+     (ns dir)←link.(ns dir)
+     (names times)←0 13 ⎕NINFO⍠('Wildcard' 1)('Recurse' 1)⊢dir,'/*'
+     parts←⎕NPARTS(times>saved)/names
+     names←(m←((3⊃¨parts)∊⊂'.dyalog')∨(4↑¨3⊃¨parts)∊⊂'.apl')/2⊃¨parts
+
+     :For (path name ext) :In m/parts
+         ⎕←'Patching ',path,name,ext
+         :If ext≡'.apla'
+             ns ⎕SE.Link.Fix 1⊃⎕NGET(path,name,ext)1
+         :Else
+             2(⍎ns).⎕FIX'file://',path,name,ext
+         :EndIf
+     :EndFor
+     ⎕←'Re-establishing link: ',(⍕ns),' ←→ ',dir
+     link←⎕NS ⎕OR 'link'
+     link.⎕EX 'ns' 'dir'
+     z←link ⎕SE.Link.Create ns dir
+ :EndFor
+
+ DEV←∨/'yY1'∊2 ⎕NQ'.' 'GetEnvironment' 'DEV'
+ DEV∨←(⊂'Build')∊⎕SI ⍝ Also enter development mode if Run was called from Build
+ :If DEV∧~⎕SYSTEM.Executable.Runtime
+     ⎕←'      ',CONFIG.LX
+ :Else
+     :If 0≠≢RIDE
+         3502⌶RIDE ⋄ 3502⌶1
+         Warn'NB RIDE is enabled - disable before shipping!'
+     :EndIf
+     ⎕TRAP←0⍴⎕TRAP ⍝ Let the application take control
+     #.⍎CONFIG.LX
+     :If ⎕SYSTEM.Executable.Runtime
+         ⎕OFF 
+     :EndIf
+ :EndIf
+ →0
+
+ERROR:
+ ⎕TRAP←0 'S'
+ 'EF'⎕WC'Form'(CONFIG.PRODUCT,' Startup Error')('Size' 300 1000)('Coord' 'Pixel')
+ 'EF.TXT'⎕WC'Text'(⊂⍕⍪⎕DMX.DM)(10 10)('Font' 'APL385 Unicode')
+ ⎕DQ'EF'

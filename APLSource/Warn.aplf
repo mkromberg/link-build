@@ -1,0 +1,13 @@
+proceed←Warn msg;text;form;txt;ok;cancel;obj;evt
+⍝ Pop up a GUI warning dialog listing msg (a vector of character-vector lines)
+⍝ with Proceed/Abort buttons. Returns 1 to proceed with the build, 0 to abort.
+
+ text←⊃{⍺,(⎕UCS 13 10),⍵}/msg,⊂'Proceed with the build?'
+ form←⎕WC'Form' 'Build Warning' ('Size' 220 520)('Coord' 'Pixel')('Posn' 'Middle' 'Middle')
+ txt←form.⎕WC'Text'(⊂text)(10 10)('Size' 160 500)
+ ok←form.⎕WC'Button' 'Proceed' ('Posn' 180 300)('Size' 28 90)('Event' 'Select' 1)
+ cancel←form.⎕WC'Button' 'Abort' ('Posn' 180 410)('Size' 28 90)('Event' 'Select' 1)
+ :Repeat
+     (obj evt)←2↑⎕DQ form
+ :Until evt≡'Select'
+ proceed←obj≡ok
