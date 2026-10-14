@@ -52,7 +52,7 @@ A build folder contains:
    `dev.bat` - restart the saved workspace later without rebuilding (it patches itself
    in `Run`, which is its `⎕LX`):
    ```bat
-   dyalog.exe DEV=Y LOAD=C:	mp\myapp.dws
+   dyalog.exe DEV=Y LOAD=C:\tmp\myapp.dws
    ```
 5. Run `builddev.bat` (or `build.bat`). Add `pull` as a command-line argument to
    `git pull` every source folder before loading it.
@@ -69,7 +69,7 @@ and a warning is shown.
 
 ## Configuration
 
-Build parameters (previously individual environment variables) now live in a JSON
+Build parameters are set in a
 file named `linkbuild.json`. It is looked for in the folder given by the
 `BUILD_CONFIG` environment variable (if the value names a file, its folder is used),
 or in the current directory if `BUILD_CONFIG` is not set. See
@@ -117,9 +117,9 @@ to `BuildExe`:
 | `buildcopy`  | Path, relative to `GITPATH`, that the freshly bound exe is also copied to (e.g. an installer staging folder), if it already exists. |
 | `details`    | Windows version-resource metadata: `Comments`, `CompanyName`, `FileDescription`, `LegalCopyright`, `ProductName`. `FileVersion`/`ProductVersion` are computed automatically at build time from the current month/year, and a timestamp is appended to `LegalCopyright` automatically - neither is set in the config file. |
 
-## Deleted files
+## Modified and Deleted files
 
-A development workspace is saved at build time, and `Run` (its `⎕LX`) patches it on
+A development workspace is saved at build time, and acts as a cache. The function `linkbuild.Run` (its `⎕LX`) patches it on
 every start by re-fixing source files modified since the save. Files that were
 *deleted* in the meantime would otherwise live on in the saved workspace.
 
