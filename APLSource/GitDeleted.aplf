@@ -1,0 +1,10 @@
+files←path GitDeleted hash;r;streams;rc
+⍝ Names (relative to path, '/'-separated) of files below path that git reports as
+⍝ deleted in the working tree compared with commit hash - i.e. since that build
+ (r streams rc)←3↑⎕SHELL 'git' '-C' path '-c' 'core.quotepath=off' 'diff' '--name-only' '--diff-filter=D' '--relative' hash '--' '.'
+ :If rc≠0
+     ⎕←'*** WARNING: unable to ask git for deleted files in ',path
+     files←0⍴⊂''
+ :Else
+     files←⊃,/(0<≢¨r)/r
+ :EndIf

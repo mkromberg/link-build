@@ -1,12 +1,9 @@
-config←ReadConfig;getEnv;folder
+config←ReadConfig;getEnv;folder;file
 ⍝ All build parameters (except DEV and RIDE, which stay plain environment
 ⍝ variables - see Build and Patch) live in a JSON file named by the
 ⍝ BUILD_CONFIG environment variable. See Claude/cleanup.md Phase 1.
 getEnv←{2 ⎕NQ'.' 'GetEnvironment' ⍵}
-:If 0=≢folder←getEnv 'BUILD_CONFIG'
-    ⎕←'*** BUILD_CONFIG environment variable is not set ***'
-    ⎕SIGNAL 11
-:EndIf
+folder←∊1 ⎕NPARTS getEnv 'BUILD_CONFIG'
 
 :If ~⎕NEXISTS file←folder,'/linkbuild.json'
     ⎕←'*** BUILD_CONFIG file not found: ',file
@@ -15,3 +12,4 @@ getEnv←{2 ⎕NQ'.' 'GetEnvironment' ⍵}
 config←⎕JSON 1⊃⎕NGET file
 config.DEV←∨/'yY1'∊getEnv 'DEV'
 config.configsource←1⊃1 ⎕NPARTS file
+config.(delete←⎕VGET ⊂'delete' 1)

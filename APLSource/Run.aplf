@@ -1,5 +1,6 @@
-  Run;saved;m;link;ns;dir;names;times;parts;path;name;ext;z;⎕TRAP
+  Run;saved;m;link;ns;dir;names;times;parts;path;name;ext;z;⎕TRAP;norm;i;deleted;file;tgt
 ⍝ Patch, then "launch" workspace built by Build
+⍝ Patching expunges names of source files deleted since the build, then fixes changed files
 
  ⎕TRAP←0 'C' '→ERROR'
 
@@ -11,20 +12,43 @@
      LINKS←(~m)/LINKS
  :EndIf
 
+ norm←{{('/'=¯1↑⍵)↓⍵}⎕C'/'@('\'=⊢)⍵} ⍝ Compare paths regardless of slash style, case or trailing slash
+
  :For link :In LINKS
      (ns dir)←link.(ns dir)
+
+     :If CONFIG.delete
+         i←(norm¨GITREPOS.path)⍳⊂norm dir ⍝ Repo as it was at build time
+     :AndIf i≤≢GITREPOS
+         deleted←dir GitDeleted i⊃GITREPOS.hash
+         :For file :In deleted
+             (path name ext)←⎕NPARTS file
+             :If (ext≡'.dyalog')∨'.apl'≡4↑ext ⍝ A source file that Link would have loaded
+                 tgt←ns,(~link.flatten)/∊'.',¨'/'(≠⊆⊢)path ⍝ Subfolders are sub-namespaces unless flattened
+                 :If (9=⎕NC tgt)∨(⊂tgt)∊,¨'#' '⎕SE'
+                     :If 0≠(⍎tgt).⎕NC⊂name
+                         z←(⍎tgt).⎕EX⊂name
+                         ⎕←'Expunged ',tgt,'.',name,' (',file,' deleted)'
+                     :EndIf
+                 :EndIf
+             :EndIf
+         :EndFor
+     :EndIf
+
      (names times)←0 13 ⎕NINFO⍠('Wildcard' 1)('Recurse' 1)⊢dir,'/*'
      parts←⎕NPARTS(times>saved)/names
      names←(m←((3⊃¨parts)∊⊂'.dyalog')∨(4↑¨3⊃¨parts)∊⊂'.apl')/2⊃¨parts
 
      :For (path name ext) :In m/parts
-         ⎕←'Patching ',path,name,ext
+         ⎕←'Patched ',path,name,ext
+         tgt←ns,(~link.flatten)/∊'.',¨'/'(≠⊆⊢)(≢dir)↓path ⍝ Subfolders are sub-namespaces unless flattened    
          :If ext≡'.apla'
-             ns ⎕SE.Link.Fix 1⊃⎕NGET(path,name,ext)1
+             tgt ⎕SE.Link.Fix 1⊃⎕NGET(path,name,ext)1
          :Else
-             2(⍎ns).⎕FIX'file://',path,name,ext
+             2(⍎tgt).⎕FIX'file://',path,name,ext
          :EndIf
      :EndFor
+     ⎕←''
      ⎕←'Re-establishing link: ',(⍕ns),' ←→ ',dir
      link←⎕NS ⎕OR 'link'
      link.⎕EX 'ns' 'dir'
